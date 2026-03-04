@@ -8,10 +8,10 @@ import ru.unbread.service.ProducerService;
 import static ru.unbread.model.RabbitQueue.ANSWER_MESSAGE;
 
 @Service
-public class ProducesServiceImpl implements ProducerService {
+public class ProducerServiceImpl implements ProducerService {
     private final RabbitTemplate rabbitTemplate;
 
-    public ProducesServiceImpl(RabbitTemplate rabbitTemplate) {
+    public ProducerServiceImpl(RabbitTemplate rabbitTemplate) {
         this.rabbitTemplate = rabbitTemplate;
     }
 

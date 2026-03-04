@@ -5,8 +5,6 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import static ru.unbread.model.RabbitQueue.*;
-
 @Configuration
 public class RabbitConfiguration {
     @Bean
