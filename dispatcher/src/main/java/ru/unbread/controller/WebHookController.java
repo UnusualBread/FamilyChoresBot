@@ -1,4 +1,3 @@
-/*
 package ru.unbread.controller;
 
 import org.springframework.http.ResponseEntity;
@@ -22,4 +21,3 @@ public class WebHookController {
         return ResponseEntity.ok().build();
     }
 }
-*/

@@ -3,7 +3,6 @@ package ru.unbread.controller;
 import lombok.extern.log4j.Log4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -12,18 +11,16 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import javax.annotation.PostConstruct;
-import java.util.List;
 
 @Component
 @Log4j
-public class TelegramBot extends TelegramLongPollingBot {
+public class TelegramBot extends TelegramWebhookBot {
     @Value("${bot.name}")
     private String botName;
     @Value("${bot.token}")
     private String botToken;
-    /*@Value("${bot.uri}")
-    private String botUri;*/
-
+    @Value("${bot.uri}")
+    private String botUri;
     private final UpdateProcessor updateProcessor;
 
     public TelegramBot(UpdateProcessor updateProcessor) {
@@ -31,11 +28,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     @PostConstruct
-    public void init() {
-        updateProcessor.registerBot(this );
-    }
-
-    /*@PostConstruct
     public void init() {
         updateProcessor.registerBot(this);
         try {
@@ -46,7 +38,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             log.error(e);
         }
-    }*/
+    }
 
     @Override
     public String getBotUsername() {
@@ -58,10 +50,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         return botToken;
     }
 
-    /*@Override
+    @Override
     public String getBotPath() {
         return "/update";
-    }*/
+    }
 
     public void sendAnswerMessage(SendMessage message) {
         if (message != null) {
@@ -74,23 +66,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     @Override
-    public void onRegister() {
-
-    }
-
-    /*@Override
-    public BotApiMethod onWebhookUpdateReceived(Update update) {
+    public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
         return null;
-    }*/
-
-    @Override
-    public void onUpdateReceived(Update update) {
-        var originalMessage = update.getMessage();
-        updateProcessor.processUpdate(update);
-    }
-
-    @Override
-    public void onUpdatesReceived(List<Update> updates) {
-        super.onUpdatesReceived(updates);
     }
 }

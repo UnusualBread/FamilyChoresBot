@@ -8,10 +8,10 @@ import ru.unbread.service.UpdateProducer;
 
 @Service
 @Log4j
-public class UpdateProductImpl implements UpdateProducer {
+public class UpdateProducerImpl implements UpdateProducer {
     private final RabbitTemplate rabbitTemplate;
 
-    public UpdateProductImpl(RabbitTemplate rabbitTemplate) {
+    public UpdateProducerImpl(RabbitTemplate rabbitTemplate) {
         this.rabbitTemplate = rabbitTemplate;
     }
 
