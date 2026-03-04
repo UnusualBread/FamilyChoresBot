@@ -11,10 +11,11 @@ import ru.unbread.entity.AppUser;
 import ru.unbread.entity.RawData;
 import ru.unbread.service.MainService;
 import ru.unbread.service.ProducerService;
+import ru.unbread.service.enums.ServiceCommand;
 
 import static ru.unbread.entity.enums.UserState.BASIC_STATE;
 import static ru.unbread.entity.enums.UserState.WAIT_FOR_EMAIL_STATE;
-import static ru.unbread.service.enums.ServiceCommands.*;
+import static ru.unbread.service.enums.ServiceCommand.*;
 
 @Service
 @Log4j
@@ -37,7 +38,8 @@ public class MainServiceImpl implements MainService {
         var text = update.getMessage().getText();
         var output = "";
 
-        if (CANCEL.equals(text)) {
+        var serviceCommand = ServiceCommand.fromValue(text);
+        if (CANCEL.equals(serviceCommand)) {
             output = cancelProcess(appUser);
         } else if (BASIC_STATE.equals(userState)) {
             output = processServiceCommand(appUser, text);
@@ -84,6 +86,7 @@ public class MainServiceImpl implements MainService {
         var userState = appUser.getState();
         if (!appUser.getIsActive()) {
             var error = "Зарегистрируйтесь или активируйте свою учётною запись для загрузки фото или файлов";
+            sendAnswer(error, chatId);
             return true;
         } else if (!BASIC_STATE.equals(userState)) {
             var error = "Отмените текущую команду с помощью /cancel для отправки фото или файлов";
@@ -101,12 +104,13 @@ public class MainServiceImpl implements MainService {
     }
 
     private String processServiceCommand(AppUser appUser, String cmd) {
-        if (REGISTRATION.equals(cmd)) {
+        var serviceCommand = ServiceCommand.fromValue(cmd);
+        if (REGISTRATION.equals(serviceCommand)) {
             //TODO добавить регистрацию
             return "Временно недоступно";
-        } else if (HELP.equals(cmd)) {
+        } else if (HELP.equals(serviceCommand)) {
             return help();
-        } else if (START.equals(cmd)) {
+        } else if (START.equals(serviceCommand)) {
             return "Приветствую! Чтобы посмотреть список доступных команд введите /help";
         } else {
             return "Неизвестная команда. Чтобы посмотреть список доступных команд введите /help";
