@@ -1,0 +1,22 @@
+server:
+  port: 8084
+  ssl:
+    enabled: false
+
+bot:
+  name: family_chores_bot
+  token: ${BOT_TOKEN}
+  uri: https://geralyn-pseudosessile-jonas.ngrok-free.dev
+  #bot.uri=https://mytelegrambot.ru
+
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASS}
+    queues:
+      text-message-update: text_message_update
+      doc-message-update: doc_message_update
+      photo-message-update: photo_message_update
+      answer-message: answer_message

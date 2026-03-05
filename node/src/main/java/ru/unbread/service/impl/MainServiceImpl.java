@@ -1,7 +1,9 @@
 package ru.unbread.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
@@ -15,21 +17,23 @@ import ru.unbread.service.enums.ServiceCommand;
 
 import static ru.unbread.entity.enums.UserState.BASIC_STATE;
 import static ru.unbread.entity.enums.UserState.WAIT_FOR_EMAIL_STATE;
-import static ru.unbread.service.enums.ServiceCommand.*;
+import static ru.unbread.service.enums.ServiceCommand.CANCEL;
+import static ru.unbread.service.enums.ServiceCommand.HELP;
+import static ru.unbread.service.enums.ServiceCommand.REGISTRATION;
+import static ru.unbread.service.enums.ServiceCommand.START;
 
-@Service
 @Log4j
+@RequiredArgsConstructor
+@Service
 public class MainServiceImpl implements MainService {
+
     private final RawDataDAO rawDataDAO;
+
     private final ProducerService producerService;
+
     private final AppUserDAO appUserDAO;
 
-    public MainServiceImpl(RawDataDAO rawDataDAO, ProducerService producerService, AppUserDAO appUserDAO) {
-        this.rawDataDAO = rawDataDAO;
-        this.producerService = producerService;
-        this.appUserDAO = appUserDAO;
-    }
-
+    @Transactional
     @Override
     public void processTextMessage(Update update) {
         saveRawData(update);
@@ -97,7 +101,7 @@ public class MainServiceImpl implements MainService {
     }
 
     private void sendAnswer(String output, Long chatId) {
-        SendMessage sendMessage = new SendMessage();
+        var sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
         sendMessage.setText(output);
         producerService.produceAnswer(sendMessage);
@@ -131,9 +135,9 @@ public class MainServiceImpl implements MainService {
     }
 
     private AppUser findOrSaveAppUser(Update update) {
-        User telegramUser = update.getMessage().getFrom();
-        AppUser persistentAppUser = appUserDAO.findAppUserByTelegramUserId(telegramUser.getId());
-        if (persistentAppUser == null) {
+        var telegramUser = update.getMessage().getFrom();
+        var appUserOpt = appUserDAO.findByTelegramUserId(telegramUser.getId());
+        if (appUserOpt.isEmpty()) {
             AppUser transientAppUser = AppUser.builder()
                     .telegramUserId(telegramUser.getId())
                     .username(telegramUser.getUserName())
@@ -145,11 +149,11 @@ public class MainServiceImpl implements MainService {
                     .build();
             return appUserDAO.save(transientAppUser);
         }
-        return persistentAppUser;
+        return appUserOpt.get();
     }
 
     private void saveRawData(Update update) {
-        RawData rawData = RawData.builder()
+        var rawData = RawData.builder()
                 .event(update)
                 .build();
         rawDataDAO.save(rawData);
