@@ -3,7 +3,7 @@
 ENV_FILE="./.env"
 
 # Обновление кода и деплой backend приложения
-pushd ~/IdeaProjects/FamilyChoresBot/ || exit
+pushd ~/FamilyChoresBot/ || exit
 
 # Переходим на ветку main
 git checkout main
