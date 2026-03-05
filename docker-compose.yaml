@@ -158,7 +158,7 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.file.filename=/etc/traefik/data/tls.yml"
+      - "--providers.file.filename=/etc/traefik/data/tls.yaml"
     healthcheck:
       test: [ "CMD", "wget", "http://127.0.0.1:8888/ping","--spider" ]
       interval: 10s
