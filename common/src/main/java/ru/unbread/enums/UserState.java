@@ -1,4 +1,4 @@
-package ru.unbread.entity.enums;
+package ru.unbread.enums;
 
 public enum UserState {
 

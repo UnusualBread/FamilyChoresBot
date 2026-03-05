@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.User;
 import ru.unbread.dao.AppUserDAO;
 import ru.unbread.dao.RawDataDAO;
 import ru.unbread.entity.AppUser;
@@ -15,8 +14,8 @@ import ru.unbread.service.MainService;
 import ru.unbread.service.ProducerService;
 import ru.unbread.service.enums.ServiceCommand;
 
-import static ru.unbread.entity.enums.UserState.BASIC_STATE;
-import static ru.unbread.entity.enums.UserState.WAIT_FOR_EMAIL_STATE;
+import static ru.unbread.enums.UserState.BASIC_STATE;
+import static ru.unbread.enums.UserState.WAIT_FOR_EMAIL_STATE;
 import static ru.unbread.service.enums.ServiceCommand.CANCEL;
 import static ru.unbread.service.enums.ServiceCommand.HELP;
 import static ru.unbread.service.enums.ServiceCommand.REGISTRATION;
@@ -138,7 +137,7 @@ public class MainServiceImpl implements MainService {
         var telegramUser = update.getMessage().getFrom();
         var appUserOpt = appUserDAO.findByTelegramUserId(telegramUser.getId());
         if (appUserOpt.isEmpty()) {
-            AppUser transientAppUser = AppUser.builder()
+            var transientAppUser = AppUser.builder()
                     .telegramUserId(telegramUser.getId())
                     .username(telegramUser.getUserName())
                     .firstName(telegramUser.getFirstName())

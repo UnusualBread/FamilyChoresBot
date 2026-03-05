@@ -6,8 +6,9 @@ server:
 bot:
   name: family_chores_bot
   token: ${BOT_TOKEN}
-  uri: https://geralyn-pseudosessile-jonas.ngrok-free.dev
-  #bot.uri=https://mytelegrambot.ru
+  #uri: https://geralyn-pseudosessile-jonas.ngrok-free.dev
+  uri: ${BOT_URI}
+  #uri: https://mytelegrambot.ru
 
 spring:
   rabbitmq:
