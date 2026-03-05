@@ -41,3 +41,9 @@ build/
 
 ### Log4j ###
 logs/
+
+### Enviroment ###
+.env
+
+### Database ###
+postgres-data/

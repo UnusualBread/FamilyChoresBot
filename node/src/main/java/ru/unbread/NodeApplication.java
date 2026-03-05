@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @EnableJpaRepositories("ru.unbread.*")
 @EntityScan("ru.unbread.*")
-@ComponentScan("ru.unbread.*"
+@ComponentScan("ru.unbread.*")
 @SpringBootApplication
 public class NodeApplication {
 

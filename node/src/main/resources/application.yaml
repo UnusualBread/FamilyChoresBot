@@ -1,20 +1,20 @@
 server:
-  port: 8085
+  port: ${NODE_PORT}
 
 spring:
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: ${RABBITMQ_USER}
-    password: ${RABBITMQ_PASS}
+    host: ${RABBIT_HOST}
+    port: ${RABBIT_PORT}
+    username: ${RABBIT_USERNAME}
+    password: ${RABBIT_PASSWORD}
     queues:
-      text-message-update: text_message_update
-      doc-message-update: doc_message_update
-      photo-message-update: photo_message_update
-      answer-message: answer_message
+      text-message-update: ${RABBIT_TEXT_MESSAGE_UPDATE_QUEUE}
+      doc-message-update: ${RABBIT_DOC_MESSAGE_UPDATE_QUEUE}
+      photo-message-update: ${RABBIT_PHOTO_MESSAGE_UPDATE_QUEUE}
+      answer-message: ${RABBIT_ANSWER_MESSAGE_QUEUE}
   datasource:
-    url: jdbc:postgresql://localhost:5432/chores
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASS}
+    url: ${POSTGRES_URL}
+    username: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PASSWORD}
   jpa:
       generate-ddl: true
