@@ -12,7 +12,7 @@ git checkout main
 git pull origin main
 
 # Останавливаем старые контейнеры микросервисов и запускаем новые, с обновлённым кодом
-docker compose -f ~/IdeaProjects/FamilyChoresBot/docker-compose.yaml --env-file $ENV_FILE down --timeout=60 --remove-orphans
-docker compose -f ~/IdeaProjects/FamilyChoresBot/docker-compose.yaml --env-file $ENV_FILE up --build --detach
+docker compose -f ~/FamilyChoresBot/docker-compose.yaml --env-file $ENV_FILE down --timeout=60 --remove-orphans
+docker compose -f ~/FamilyChoresBot/docker-compose.yaml --env-file $ENV_FILE up --build --detach
 
 popd || exit
