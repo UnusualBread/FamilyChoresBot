@@ -62,9 +62,9 @@ public class MainServiceImpl implements MainService {
         saveRawData(update);
         var appUser = findOrSaveAppUser(update);
         var chatId = update.getMessage().getChatId();
-        if (isNotAllowedToSendContent(chatId, appUser)) {
+        /*if (isNotAllowedToSendContent(chatId, appUser)) {
             return;
-        }
+        }*/
 
         //TODO добавить сохранение документа
         var answer = "Документ успешно загружен. Ссылка для скачивания: http://test.ru/get-doc/777";
@@ -76,16 +76,16 @@ public class MainServiceImpl implements MainService {
         saveRawData(update);
         var appUser = findOrSaveAppUser(update);
         var chatId = update.getMessage().getChatId();
-        if (isNotAllowedToSendContent(chatId, appUser)) {
+        /*if (isNotAllowedToSendContent(chatId, appUser)) {
             return;
-        }
+        }*/
 
         //TODO добавить сохранение фото
         var answer = "Фото успешно загружено. Ссылка для скачивания: http://test.ru/get-photo/777";
         sendAnswer(answer, chatId);
     }
 
-    private boolean isNotAllowedToSendContent(Long chatId, AppUser appUser) {
+    /*private boolean isNotAllowedToSendContent(Long chatId, AppUser appUser) {
         var userState = appUser.getState();
         if (!appUser.getIsActive()) {
             var error = "Зарегистрируйтесь или активируйте свою учётною запись для загрузки фото или файлов";
@@ -97,7 +97,7 @@ public class MainServiceImpl implements MainService {
             return true;
         }
         return false;
-    }
+    }*/
 
     private void sendAnswer(String output, Long chatId) {
         var sendMessage = new SendMessage();
@@ -134,16 +134,15 @@ public class MainServiceImpl implements MainService {
     }
 
     private AppUser findOrSaveAppUser(Update update) {
-        var telegramUser = update.getMessage().getFrom();
+        var telegramUser = update.hasMessage()
+                ? update.getMessage().getFrom()
+                : update.getCallbackQuery().getFrom();
         var appUserOpt = appUserDAO.findByTelegramUserId(telegramUser.getId());
         if (appUserOpt.isEmpty()) {
             var transientAppUser = AppUser.builder()
                     .telegramUserId(telegramUser.getId())
                     .username(telegramUser.getUserName())
-                    .firstName(telegramUser.getFirstName())
-                    .lastName(telegramUser.getLastName())
-                    //TODO изменить значение по умолчанию после добавления регистрации
-                    .isActive(true)
+                    .firstName(telegramUser.getFirstName()).lastName(telegramUser.getLastName())
                     .state(BASIC_STATE)
                     .build();
             return appUserDAO.save(transientAppUser);
