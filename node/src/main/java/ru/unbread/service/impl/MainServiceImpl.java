@@ -3,36 +3,34 @@ package ru.unbread.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import ru.unbread.dao.AppUserDAO;
-import ru.unbread.dao.RawDataDAO;
-import ru.unbread.entity.AppUser;
-import ru.unbread.entity.RawData;
+import org.telegram.telegrambots.meta.api.objects.User;
+import ru.unbread.dao.*;
+import ru.unbread.entity.*;
 import ru.unbread.service.MainService;
 import ru.unbread.service.ProducerService;
-import ru.unbread.service.enums.ServiceCommand;
+
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 import static ru.unbread.enums.UserState.BASIC_STATE;
-import static ru.unbread.enums.UserState.WAIT_FOR_EMAIL_STATE;
-import static ru.unbread.service.enums.ServiceCommand.CANCEL;
-import static ru.unbread.service.enums.ServiceCommand.HELP;
-import static ru.unbread.service.enums.ServiceCommand.REGISTRATION;
-import static ru.unbread.service.enums.ServiceCommand.START;
+import static ru.unbread.service.enums.ServiceCommand.*;
 
 @Log4j
 @RequiredArgsConstructor
 @Service
 public class MainServiceImpl implements MainService {
-
     private final RawDataDAO rawDataDAO;
-
     private final ProducerService producerService;
-
     private final AppUserDAO appUserDAO;
+    private final GroupDAO groupDAO;
+    private final MemberDAO memberDAO;
+    private final ZoneDAO zoneDAO;
 
-    @Transactional
     @Override
     public void processTextMessage(Update update) {
         saveRawData(update);
@@ -41,13 +39,12 @@ public class MainServiceImpl implements MainService {
         var text = update.getMessage().getText();
         var output = "";
 
-        var serviceCommand = ServiceCommand.fromValue(text);
+        var serviceCommand = fromValue(text);
+
         if (CANCEL.equals(serviceCommand)) {
             output = cancelProcess(appUser);
         } else if (BASIC_STATE.equals(userState)) {
-            output = processServiceCommand(appUser, text);
-        } else if (WAIT_FOR_EMAIL_STATE.equals(userState)) {
-            //TODO добавить обработку емейла
+            output = processServiceCommand(appUser, text, update);
         } else {
             log.error("Unknown user state: " + userState);
             output = "Неизвестная ошибка. Введите /cancel и попробуйте ещё раз";
@@ -57,67 +54,146 @@ public class MainServiceImpl implements MainService {
         sendAnswer(output, chatId);
     }
 
-    @Override
-    public void processDocMessage(Update update) {
-        saveRawData(update);
-        var appUser = findOrSaveAppUser(update);
-        var chatId = update.getMessage().getChatId();
-        /*if (isNotAllowedToSendContent(chatId, appUser)) {
-            return;
-        }*/
-
-        //TODO добавить сохранение документа
-        var answer = "Документ успешно загружен. Ссылка для скачивания: http://test.ru/get-doc/777";
-        sendAnswer(answer, chatId);
+    private String processServiceCommand(AppUser appUser, String text, Update update) {
+        String cmd = normalizeCommand(text);
+        var serviceCommand = fromValue(cmd);
+        return switch (serviceCommand) {
+            case HELP -> help();
+            case START -> "Приветствую! Чтобы посмотреть список доступных команд введите /help";
+            case CREATE_GROUP -> processCreateGroupCommand(update);
+            case JOIN -> processJoinCommand(update);
+            case LIST_MEMBERS -> processListMembersCommand(update);
+            case ADD_ZONES -> processAddZoneCommand(update);
+            case LIST_ZONES -> processListZonesCommand(update);
+            case DUTY -> processDutyCommand(update);
+            default -> "Неизвестная команда. Чтобы посмотреть список доступных команд введите /help";
+        };
     }
 
-    @Override
-    public void processPhotoMessage(Update update) {
-        saveRawData(update);
-        var appUser = findOrSaveAppUser(update);
-        var chatId = update.getMessage().getChatId();
-        /*if (isNotAllowedToSendContent(chatId, appUser)) {
-            return;
-        }*/
-
-        //TODO добавить сохранение фото
-        var answer = "Фото успешно загружено. Ссылка для скачивания: http://test.ru/get-photo/777";
-        sendAnswer(answer, chatId);
+    private String processDutyCommand(Update update) {
+        return createDutySchedule(update);
     }
 
-    /*private boolean isNotAllowedToSendContent(Long chatId, AppUser appUser) {
-        var userState = appUser.getState();
-        if (!appUser.getIsActive()) {
-            var error = "Зарегистрируйтесь или активируйте свою учётною запись для загрузки фото или файлов";
-            sendAnswer(error, chatId);
-            return true;
-        } else if (!BASIC_STATE.equals(userState)) {
-            var error = "Отмените текущую команду с помощью /cancel для отправки фото или файлов";
-            sendAnswer(error, chatId);
-            return true;
+    public String createDutySchedule(Update update) {
+        Group group = findOrCreateGroup(update);
+        List<Member> members = memberDAO.findByGroupId(group.getId());
+        List<Zone> zones = zoneDAO.findByGroup(group);
+
+        if (members.isEmpty() || zones.isEmpty()) {
+            return "Нет участников или зон для ротации";
         }
-        return false;
-    }*/
 
-    private void sendAnswer(String output, Long chatId) {
-        var sendMessage = new SendMessage();
-        sendMessage.setChatId(chatId);
-        sendMessage.setText(output);
-        producerService.produceAnswer(sendMessage);
+        int membersCount = members.size();
+        long weeksSinceStart = ChronoUnit.WEEKS.between(group.getCreationDate().toLocalDate(), LocalDate.now());
+        int orderNumber = (int) (weeksSinceStart % membersCount);
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < zones.size(); i++) {
+            Member member = members.get((i - orderNumber + membersCount) % membersCount);
+            Zone zone = zones.get(i);
+            sb.append(zone.getName())
+                    .append(" — @")
+                    .append(member.getUsername())
+                    .append(" ")
+                    .append(member.getFirstName() != null ? member.getFirstName() : "")
+                    .append(" ")
+                    .append(member.getLastName() != null ? member.getLastName() : "")
+                    .append("\n");
+        }
+
+        return sb.toString();
     }
 
-    private String processServiceCommand(AppUser appUser, String cmd) {
-        var serviceCommand = ServiceCommand.fromValue(cmd);
-        if (REGISTRATION.equals(serviceCommand)) {
-            //TODO добавить регистрацию
-            return "Временно недоступно";
-        } else if (HELP.equals(serviceCommand)) {
-            return help();
-        } else if (START.equals(serviceCommand)) {
-            return "Приветствую! Чтобы посмотреть список доступных команд введите /help";
-        } else {
-            return "Неизвестная команда. Чтобы посмотреть список доступных команд введите /help";
+    private String processListZonesCommand(Update update) {
+        Long chatId = update.getMessage().getChatId();
+        Group group = groupDAO.findByChatId(chatId)
+                .orElse(null);
+        if (group == null) {
+            return "Группа не найдена";
         }
+        List<Zone> zones = zoneDAO.findByGroup(group);
+        StringBuilder sb = new StringBuilder("Зоны группы:\n");
+        zones.forEach(z ->
+                sb
+                        .append(z.getName())
+                        .append("\n")
+        );
+        return sb.toString();
+    }
+
+    private String processAddZoneCommand(Update update) {
+        List<String> input = Arrays.stream(update.getMessage().getText().split(" "))
+                .skip(1)
+                .filter(s -> !s.isBlank())
+                .toList();
+        input.forEach(z -> findOrCreateZone(z, update));
+        return "Зоны добавлены в группу";
+    }
+
+    private Zone findOrCreateZone(String zoneName, Update update) {
+        Group group = findOrCreateGroup(update);
+        return zoneDAO.findByNameAndGroup(zoneName, Optional.ofNullable(group))
+                .orElseGet(() -> {
+                    Zone zone = Zone.builder()
+                            .name(zoneName)
+                            .group(group)
+                            .isActive(true)
+                            .build();
+                    return zoneDAO.save(zone);
+                });
+    }
+
+    private String processListMembersCommand(Update update) {
+        Long chatId = update.getMessage().getChatId();
+        Group group = groupDAO.findByChatId(chatId)
+                .orElse(null);
+        if (group == null) {
+            return "Группа не найдена";
+        }
+        List<Member> members = memberDAO.findByGroup(group);
+        StringBuilder sb = new StringBuilder("Участники группы:\n");
+        members.forEach(m ->
+                sb
+                        .append("@")
+                        .append(m.getUsername())
+                        .append(" ")
+                        .append(m.getFirstName() != null ? m.getFirstName() : "")
+                        .append(" ")
+                        .append(m.getLastName() != null ? m.getLastName() : "")
+                        .append("\n")
+        );
+        return sb.toString();
+    }
+
+    private String processCreateGroupCommand(Update update) {
+        Group group = findOrCreateGroup(update);
+        //List<Member> members = processAddMembers(update);
+        return """
+                Группа %s создана
+                Для вступления в группу, каждому необходимо отправить /join, чтобы вступить в неё"""
+                .formatted(group.getName());
+    }
+
+    private String processJoinCommand(Update update) {
+        Member member = findOrCreateMember(update);
+        return "@" + member.getUsername() + " добавлен в группу";
+    }
+
+    private Member findOrCreateMember(Update update) {
+        User telegramUser = update.getMessage().getFrom();
+        Group group = findOrCreateGroup(update);
+        return memberDAO.findByTelegramUserIdAndGroupId(telegramUser.getId(), group.getId())
+                .orElseGet(() -> {
+                    Member member = Member.builder()
+                            .telegramUserId(telegramUser.getId())
+                            .firstName(telegramUser.getFirstName())
+                            .lastName(telegramUser.getLastName())
+                            .username(telegramUser.getUserName())
+                            .isActive(true)
+                            .group(group)
+                            .build();
+                    return memberDAO.save(member);
+                });
     }
 
     private String help() {
@@ -133,27 +209,56 @@ public class MainServiceImpl implements MainService {
         return "Команда отменена";
     }
 
+    private Group findOrCreateGroup(Update update) {
+        Long chatId = update.getMessage().getChatId();
+        String groupName = update.getMessage().getChat().getTitle();
+        return groupDAO.findByChatId(update.getMessage().getChatId())
+                .orElseGet(() -> {
+                    Group group = Group.builder()
+                            .chatId(chatId)
+                            .name(groupName)
+                            .isActive(true)
+                            .build();
+                    return groupDAO.save(group);
+                });
+    }
+
     private AppUser findOrSaveAppUser(Update update) {
-        var telegramUser = update.hasMessage()
-                ? update.getMessage().getFrom()
-                : update.getCallbackQuery().getFrom();
-        var appUserOpt = appUserDAO.findByTelegramUserId(telegramUser.getId());
-        if (appUserOpt.isEmpty()) {
-            var transientAppUser = AppUser.builder()
+        User telegramUser = update.getMessage().getFrom();
+        AppUser persistentAppUser = appUserDAO.findAppUserByTelegramUserId(telegramUser.getId());
+        if (persistentAppUser == null) {
+            AppUser transientAppUser = AppUser.builder()
                     .telegramUserId(telegramUser.getId())
                     .username(telegramUser.getUserName())
-                    .firstName(telegramUser.getFirstName()).lastName(telegramUser.getLastName())
+                    .firstName(telegramUser.getFirstName())
+                    .lastName(telegramUser.getLastName())
+                    .isActive(true)
                     .state(BASIC_STATE)
                     .build();
             return appUserDAO.save(transientAppUser);
         }
-        return appUserOpt.get();
+        return persistentAppUser;
     }
 
     private void saveRawData(Update update) {
-        var rawData = RawData.builder()
+        RawData rawData = RawData.builder()
                 .event(update)
                 .build();
         rawDataDAO.save(rawData);
+    }
+
+    private String normalizeCommand(String cmd) {
+        int index = cmd.indexOf("@");
+        if (index != -1) {
+            cmd = cmd.substring(0, index);
+        }
+        return cmd;
+    }
+
+    private void sendAnswer(String output, Long chatId) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
+        sendMessage.setText(output);
+        producerService.produceAnswer(sendMessage);
     }
 }

@@ -27,25 +27,18 @@ import java.util.Objects;
 @Table(name = "app_user")
 @Entity
 public class AppUser {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private Long telegramUserId;
-
     @CreationTimestamp
     private LocalDateTime firstLoginDate;
-
     private String firstName;
-
     private String lastName;
-
     private String username;
-
+    private Boolean isActive;
     @Enumerated(EnumType.STRING)
     private UserState state;
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -53,7 +46,6 @@ public class AppUser {
         AppUser appUser = (AppUser) o;
         return telegramUserId != null && Objects.equals(telegramUserId, appUser.telegramUserId);
     }
-
     @Override
     public int hashCode() {
         return getClass().hashCode();
