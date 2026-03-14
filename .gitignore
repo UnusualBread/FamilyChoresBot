@@ -41,3 +41,17 @@ build/
 
 ### Log4j ###
 logs/
+
+### Enviroment ###
+.env
+.env.local
+
+### Database ###
+postgres-data/
+
+
+### Local files ###
+dispatcher/src/main/resources/application-dev.yaml
+docker-compose.dev.yaml
+node/src/main/resources/application-dev.yaml
+certs/
